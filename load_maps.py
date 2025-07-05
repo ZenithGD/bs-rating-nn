@@ -4,14 +4,33 @@ import requests
 import os, time
 from pprint import pprint
 from tqdm import trange
-from bsrating.ssapi import *
+from bsrating.leveldata import *
 from bsrating.utils import *
 
 from dotenv import load_dotenv
 
 import traceback
 
-def preprocess_folders(song_folder):
+def preprocess_folders(song_folder: str):
+    """From the song folder, create the association between ids and the full folder name
+    that contains the map data. This will generate a dictionary like this:
+
+    ```
+    {
+        '1a3e1' : '<song_folder>/1a3e1 (Go Insane - Helloiamdaan & miitchel)',
+        '3b2f8' : '<song_folder>/3b2f8 (Kyuukou - zeon & Gabriel)',
+        '2c239' : '<song_folder>/2c238 (When I use it - Astrella & Timbo)'
+    }
+    ```
+
+    The result is used to efficiently look up for a song folder just by the id of the map.
+
+    Args:
+        song_folder (str): The path pointing to the CustomLevels folder.
+
+    Returns:
+        _type_: _description_
+    """
 
     # mapping for all files
     def strip_id(name):
@@ -22,22 +41,7 @@ def preprocess_folders(song_folder):
     names = os.listdir(song_folder)
     
     return { strip_id(name) : os.path.join(song_folder, name) 
-             for name in names }
-
-def load_local_map_info(raw_info, folder_association : dict):
-
-    level_path = os.path.join(folder_association[raw_info["id"]], f"{raw_info["difficulty"]}Standard.dat")
-    if not os.path.isfile(level_path):
-        level_path = os.path.join(folder_association[raw_info["id"]], f"{raw_info["difficulty"]}.dat")
-        
-    return {
-        "id" :              raw_info["id"],
-        "difficulty" :      raw_info["difficulty"],
-        "hash" :            raw_info["hash"],
-        "name" :            raw_info["name"],
-        "stars" :           raw_info["stars"],
-        "level_path":       level_path
-    }
+             for name in names if os.path.isdir(os.path.join(song_folder, name)) }
 
 def read_maps_info(
         songs_folder : str, 
@@ -63,7 +67,7 @@ def read_maps_info(
             while attempts < MAX_ATTS:
                 try:
                     map_info = ss_load_info_by_hash(item["hash"], diff["name"])
-                    map_list.append(load_local_map_info(map_info, folder_association))
+                    map_list.append(combine_map_info(map_info, folder_association))
                     break
                 except SSTimeOutError as terr:
                     print(f"Waiting {terr.time} seconds. Reason: {terr}")
@@ -94,10 +98,15 @@ def main(args):
         ss_ranked_playlist = json.load(rp)
 
     # associate the id with the local folder of the song
-    folder_association = preprocess_folders(args.songs)
+    folder_association = preprocess_folders(os.getenv("SONG_FOLDER"))
 
     # read song folder and fetch information from scoresaber
-    song_data = read_maps_info(args.songs, ss_ranked_playlist, folder_association, verbose=args.verbose, limit=args.limit)
+    song_data = read_maps_info(
+        os.getenv("SONG_FOLDER"), 
+        ss_ranked_playlist, 
+        folder_association, 
+        verbose=args.verbose, limit=args.limit)
+    
     with open(os.path.join(args.folder, "song_data.json"), 'w') as song_list:
         json.dump(song_data, song_list, indent=2)
 
@@ -107,7 +116,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load info from maps")
 
     parser.add_argument("folder", help="The folder to store the map dataset")
-    parser.add_argument("--songs", help="The folder containing the level data")
     parser.add_argument("--playlist", help="The playlist referencing all the beat saber maps")
     parser.add_argument("--limit", type=int, default=-1, help="Limit of ranked maps")
     parser.add_argument("--verbose", action="store_true", help="Whether to print additional info")

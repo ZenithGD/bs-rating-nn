@@ -25,7 +25,7 @@ def ss_load_info_by_hash(hash: str, difficulty : str):
     bs_r_body = bs_r.json()
 
     if not HTTPStatus(bs_r_code).is_success:
-        raise NotFoundError(f"{hash} Not found")
+        raise MapNotFoundError(f"{hash} Not found")
     
     return {
         "id" : bs_r_body["id"],

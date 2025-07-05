@@ -1,4 +1,3 @@
-
 class SSTimeOutError(Exception):
 
     def __init__(self, msg : str, time : float):
@@ -7,7 +6,7 @@ class SSTimeOutError(Exception):
         self.time = time
 
     
-class NotFoundError(Exception):
+class MapNotFoundError(Exception):
 
     def __init__(self, msg : str):
         
