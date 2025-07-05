@@ -210,3 +210,4 @@ __marimo__/
 .streamlit/secrets.toml
 
 song_path.txt
+data/song_data.json
