@@ -45,18 +45,37 @@ def preprocess_folders(song_folder: str):
 
 def read_maps_info(
         songs_folder : str, 
-        ss_ranked_playlist, 
-        folder_association : list,
+        ranked_playlist : dict, 
+        folder_association : dict,
         verbose = False,
         limit = -1) -> list:
+    """Read information about all the maps and return a list containing the combined
+    info from Beat Saver and ScoreSaber. 
+
+    The maps from the playlist `ranked_playlist` are searched in the `songs_folder` folder, which
+    should contain the level data for the songs.
+
+    Args:
+        songs_folder (str): The path pointing to the folder containing the levels' data
+        (i.e. your CustomLevels folder)
+        ranked_playlist (dict): An object containing the playlist data for all songs to be searched.
+        folder_association (dict): A dictionary that associates the level's Beat Saver id to its location in the 
+        songs folder. This should be the result of the `preprocess_folder` function
+        verbose (bool, optional): Whether to print additional info. Defaults to False.
+        limit (int, optional): The limit of maps to process. If the limit is negative, 
+        then all songs from the playlist are included. Defaults to -1.
+
+    Returns:
+        list: The list of maps, each contains general information about the 
+    """
 
     MAX_ATTS = int(os.getenv("SS_TIMEOUT_RETRIES"))
     map_list = []
     i = 0
     # loop through all ranked maps and fetch information from ss
-    for i in range(len(ss_ranked_playlist["songs"])):
+    for i in range(len(ranked_playlist["songs"])):
         print("i =", i)
-        item = ss_ranked_playlist["songs"][i]
+        item = ranked_playlist["songs"][i]
 
         print(item)
         for diff in item["difficulties"]:
@@ -93,9 +112,9 @@ def main(args):
         print(f"Folder already {path_to_dataset} exists.")
 
     # read playlist referencing ss ranked maps
-    ss_ranked_playlist = None
+    ranked_playlist = None
     with open(args.playlist) as rp:
-        ss_ranked_playlist = json.load(rp)
+        ranked_playlist = json.load(rp)
 
     # associate the id with the local folder of the song
     folder_association = preprocess_folders(os.getenv("SONG_FOLDER"))
@@ -103,7 +122,7 @@ def main(args):
     # read song folder and fetch information from scoresaber
     song_data = read_maps_info(
         os.getenv("SONG_FOLDER"), 
-        ss_ranked_playlist, 
+        ranked_playlist, 
         folder_association, 
         verbose=args.verbose, limit=args.limit)
     

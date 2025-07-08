@@ -13,7 +13,7 @@ def combine_map_info(raw_info : dict, folder_association : dict) -> dict:
         folder_association (dict): An association returned by `preprocess_folders`.
 
     Returns:
-        dict: A dictionary containing the map information and a pointer to the 
+        dict: A dictionary containing the map information and a path to the difficulty file and the info file.
     """
 
     level_path = os.path.join(folder_association[raw_info["id"]], f"{raw_info["difficulty"]}Standard.dat")
