@@ -11,7 +11,7 @@ def ss_load_info_by_hash(hash: str, difficulty : str):
 
     # load scoresaber info
     ss_rq_path = f"{os.getenv("SCORESABER_API_URL")}/leaderboard/by-hash/{hash}/info?difficulty={diff_num}"
-    ss_r = rq.get(ss_rq_path)
+    ss_r = rq.get(ss_rq_path, timeout=5)
     ss_r_code = ss_r.status_code
     ss_r_body = ss_r.json()
 
@@ -20,7 +20,7 @@ def ss_load_info_by_hash(hash: str, difficulty : str):
     
     # load beatsaver info
     bs_rq_path = f"{os.getenv("BEATSAVER_API_URL")}/maps/hash/{hash}"
-    bs_r = rq.get(bs_rq_path)
+    bs_r = rq.get(bs_rq_path, timeout=5)
     bs_r_code = bs_r.status_code
     bs_r_body = bs_r.json()
 
