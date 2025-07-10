@@ -3,7 +3,7 @@ import json
 import requests
 import os, time
 from pprint import pprint
-from tqdm import trange
+from tqdm import tqdm, trange
 from bsrating.leveldata import *
 from bsrating.utils import *
 
@@ -47,7 +47,9 @@ def read_maps_info(
         songs_folder : str, 
         ranked_playlist : dict, 
         folder_association : dict,
+        use_bl : bool = False,
         verbose = False,
+        map_list : list = [],
         limit = -1) -> list:
     """Read information about all the maps and return a list containing the combined
     info from Beat Saver and ScoreSaber. 
@@ -60,7 +62,8 @@ def read_maps_info(
         (i.e. your CustomLevels folder)
         ranked_playlist (dict): An object containing the playlist data for all songs to be searched.
         folder_association (dict): A dictionary that associates the level's Beat Saver id to its location in the 
-        songs folder. This should be the result of the `preprocess_folder` function
+        songs folder. This should be the result of the `preprocess_folder` function.
+        use_bl (bool, optional): Whether to fetch information from the BeatLeader servers.
         verbose (bool, optional): Whether to print additional info. Defaults to False.
         limit (int, optional): The limit of maps to process. If the limit is negative, 
         then all songs from the playlist are included. Defaults to -1.
@@ -68,39 +71,71 @@ def read_maps_info(
     Returns:
         list: The list of maps, each contains general information about the 
     """
+    # allows quick lookup of existing map data
+    existing_maps = { (item["hash"].lower(), item["difficulty"]) : i for i, item in enumerate(map_list) }
 
     MAX_ATTS = int(os.getenv("SS_TIMEOUT_RETRIES"))
-    map_list = []
     i = 0
     # loop through all ranked maps and fetch information from ss
-    for i in range(len(ranked_playlist["songs"])):
-        print("i =", i)
-        item = ranked_playlist["songs"][i]
+    for i, item in enumerate(tqdm(ranked_playlist)):
+        hash_key, diff_name = item
+        try:
+            if (hash_key.lower(), diff_name) not in existing_maps.keys():
+                map_info = load_info_by_hash(hash_key, diff_name, MAX_ATTS, use_bl)
+                map_list.append(combine_map_info(map_info, folder_association, use_bl))
+            else:
+                # update hash to be consistent just in case
+                map_info = map_list[existing_maps[(hash_key.lower(), diff_name)]]
 
-        print(item)
-        for diff in item["difficulties"]:
-            print("diff =", diff)
+                # update path to the local file
+                level_path = os.path.join(folder_association[map_info["id"]], f"{map_info["difficulty"]}Standard.dat")
+                if not os.path.isfile(level_path):
+                    level_path = os.path.join(folder_association[map_info["id"]], f"{map_info["difficulty"]}.dat")
 
-            # fetch and save information combined from ss and local
-            attempts = 0
-            while attempts < MAX_ATTS:
-                try:
-                    map_info = ss_load_info_by_hash(item["hash"], diff["name"])
-                    map_list.append(combine_map_info(map_info, folder_association))
-                    break
-                except SSTimeOutError as terr:
-                    print(f"Waiting {terr.time} seconds. Reason: {terr}")
-                    time.sleep(terr.time)
-                except Exception as e:
-                    print("Unknown error:", traceback.print_exc())
-                    time.sleep(1)
-                print(f"Retrying... {attempts} / {MAX_ATTS}")
-                attempts += 1
+                    if not os.path.isfile(level_path):
+                        raise Exception("Difficulty file cannot be found!")
 
-            if limit > 0 and i >= limit:
-                return map_list
+                map_info["hash"] = hash_key.lower()
+                map_info["level_path"] = level_path
+                map_list[existing_maps[(hash_key.lower(), diff_name)]] = map_info
+
+        except Exception as e:
+            if verbose:
+                print("Unknown error:", e.message)
+
+        if limit > 0 and i >= limit:
+            return map_list
 
     return map_list
+
+def read_playlists(ss_path : str, bl_path : str, use_bl) -> list:
+    # read playlists referencing ranked maps
+    ss_ranked_playlist = None
+    with open(ss_path) as rp:
+        ss_ranked_playlist = json.load(rp)
+
+    bl_ranked_playlist = None
+    if use_bl:
+        with open(bl_path) as rp:
+            bl_ranked_playlist = json.load(rp)
+
+    raw_list = ss_ranked_playlist["songs"]
+    if bl_ranked_playlist is not None and use_bl:
+        raw_list += bl_ranked_playlist["songs"]
+
+    # Remove duplicates and save one entry per (hash, diff) pair.
+    playlist = { (item["hash"].lower(), diff["name"]) 
+                for item in raw_list
+                for diff in item["difficulties"] if diff["characteristic"] == "Standard" }
+    
+    return playlist
+
+def process_diff_files(song_data : list, folder : str):
+    
+    for diff_data in tqdm(song_data):
+        local_data = LocalLevelInfo.from_json(diff_data)
+        with open(os.path.join(folder, local_data.unique_id())) as f:
+            json.dump(local_data.process(), f)
 
 def main(args):
 
@@ -111,10 +146,15 @@ def main(args):
     except:
         print(f"Folder already {path_to_dataset} exists.")
 
-    # read playlist referencing ss ranked maps
-    ranked_playlist = None
-    with open(args.playlist) as rp:
-        ranked_playlist = json.load(rp)
+    ranked_playlist = read_playlists(args.ss_playlist, args.bl_playlist, args.use_bl)
+
+    # check if the output file exists and has some maps already
+    map_list = []
+    try:
+        with open(os.path.join(args.folder, args.output)) as em:
+            map_list = json.load(em)
+    except Exception as e:
+        print(e)
 
     # associate the id with the local folder of the song
     folder_association = preprocess_folders(os.getenv("SONG_FOLDER"))
@@ -124,12 +164,19 @@ def main(args):
         os.getenv("SONG_FOLDER"), 
         ranked_playlist, 
         folder_association, 
-        verbose=args.verbose, limit=args.limit)
+        use_bl=args.use_bl,
+        map_list=map_list,
+        verbose=args.verbose, 
+        limit=args.limit)
     
-    with open(os.path.join(args.folder, "song_data.json"), 'w') as song_list:
+    with open(os.path.join(args.folder, args.output), 'w') as song_list:
         json.dump(song_data, song_list, indent=2)
 
-    # 
+    # process each difficulty file for training later 
+    # only the note information will be kept along with the real timestamp (not in beats but in seconds)
+    # this can potentially be used for the positional encodings to introduce information about the 
+    # speed of the swings.
+    process_diff_files(song_list, args.folder)
 
 if __name__ == '__main__':
     load_dotenv()
@@ -137,8 +184,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Load info from maps")
 
     parser.add_argument("folder", help="The folder to store the map dataset")
-    parser.add_argument("--playlist", help="The playlist referencing all the beat saber maps")
+    parser.add_argument("--ss_playlist", help="The playlist referencing all the SS ranked maps.", required=True)
+    parser.add_argument("--bl_playlist", help="The playlist referencing all the BL ranked maps.")
+    parser.add_argument("--use_bl", action="store_true", help="Whether to use BL ranked maps as well.")
     parser.add_argument("--limit", type=int, default=-1, help="Limit of ranked maps")
     parser.add_argument("--verbose", action="store_true", help="Whether to print additional info")
+    parser.add_argument("--output", help="The name of the output .json file referencing all the songs.", default="song_data.json")
 
     main(parser.parse_args())

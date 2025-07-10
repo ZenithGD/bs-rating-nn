@@ -1,4 +1,4 @@
-class SSTimeOutError(Exception):
+class TimeOutError(Exception):
 
     def __init__(self, msg : str, time : float):
         
@@ -7,6 +7,12 @@ class SSTimeOutError(Exception):
 
     
 class MapNotFoundError(Exception):
+
+    def __init__(self, msg : str):
+        
+        super().__init__(msg)
+
+class MapLogicError(Exception):
 
     def __init__(self, msg : str):
         
