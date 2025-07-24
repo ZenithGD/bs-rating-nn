@@ -75,9 +75,13 @@ def read_maps_info(
     existing_maps = { (item["hash"].lower(), item["difficulty"]) : i for i, item in enumerate(map_list) }
 
     MAX_ATTS = int(os.getenv("SS_TIMEOUT_RETRIES"))
-    i = 0
-    # loop through all ranked maps and fetch information from ss
-    for i, item in enumerate(tqdm(ranked_playlist)):
+
+    # loop through all ranked maps (or up to the limit) and fetch information from ss
+    rp = list(ranked_playlist)
+    if limit > 0:
+        rp = rp[:limit]
+
+    for i, item in enumerate(tqdm(rp)):
         hash_key, diff_name = item
         try:
             if (hash_key.lower(), diff_name) not in existing_maps.keys():
@@ -86,25 +90,12 @@ def read_maps_info(
             else:
                 # update hash to be consistent just in case
                 map_info = map_list[existing_maps[(hash_key.lower(), diff_name)]]
-
-                # update path to the local file
-                level_path = os.path.join(folder_association[map_info["id"]], f"{map_info["difficulty"]}Standard.dat")
-                if not os.path.isfile(level_path):
-                    level_path = os.path.join(folder_association[map_info["id"]], f"{map_info["difficulty"]}.dat")
-
-                    if not os.path.isfile(level_path):
-                        raise Exception("Difficulty file cannot be found!")
-
-                map_info["hash"] = hash_key.lower()
-                map_info["level_path"] = level_path
-                map_list[existing_maps[(hash_key.lower(), diff_name)]] = map_info
-
+                updated_info = update_map_info(LocalLevelInfo.from_json(map_info), folder_association, use_bl)
+                map_list[existing_maps[(hash_key.lower(), diff_name)]] = updated_info
         except Exception as e:
             if verbose:
-                print("Unknown error:", e.message)
-
-        if limit > 0 and i >= limit:
-            return map_list
+                print("Unknown error:", e)
+                traceback.print_exc()
 
     return map_list
 
@@ -132,11 +123,14 @@ def read_playlists(ss_path : str, bl_path : str, use_bl) -> list:
 
 def process_diff_files(song_data : list, folder : str):
     
-    for diff_data in tqdm(song_data):
+    for i, diff_data in enumerate(tqdm(song_data)):
         local_data = LocalLevelInfo.from_json(diff_data)
-        with open(os.path.join(folder, local_data.unique_id())) as f:
-            json.dump(local_data.process(), f)
-
+        with open(os.path.join(folder, local_data.unique_id()), 'w', encoding='utf-8') as f:
+            try:
+                json.dump(local_data.process(), f)
+            except Exception as e:
+                print("Error dumping diff:", e)
+                traceback.print_exc()
 def main(args):
 
     # create folder 
@@ -176,7 +170,7 @@ def main(args):
     # only the note information will be kept along with the real timestamp (not in beats but in seconds)
     # this can potentially be used for the positional encodings to introduce information about the 
     # speed of the swings.
-    process_diff_files(song_list, args.folder)
+    process_diff_files(song_data, path_to_dataset)
 
 if __name__ == '__main__':
     load_dotenv()

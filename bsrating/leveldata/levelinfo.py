@@ -1,6 +1,11 @@
 import json
+import os
+from bsrating.game.beatmap import BeatMap, SongInfo
 from bsrating.leveldata.exceptions import MapLogicError
 import numpy as np
+from packaging.version import Version
+
+from bsrating.utils.strings import capitalize_diff
 
 class OnlineLevelInfo:
 
@@ -54,14 +59,16 @@ class LocalLevelInfo:
         name : str, 
         diff : int, 
         stars : float,
-        level_path : str):
+        song_path : str,
+        info_file : str):
 
         self.id = id
         self.hash = hash
         self.name = name
         self.diff = diff
         self.stars = stars
-        self.level_path = level_path
+        self.song_path = song_path
+        self.info_file = info_file
 
     def unique_id(self) -> str:
 
@@ -69,22 +76,39 @@ class LocalLevelInfo:
 
     @staticmethod
     def from_json(json_data : dict):
-
         return LocalLevelInfo(
-            json_data["id"],
-            json_data["hash"],
-            json_data["name"],
-            json_data["diff"],
-            json_data["stars"],
-            json_data["level_path"]
+            json_data.get("id", ""),
+            json_data.get("hash", ""),
+            json_data.get("name", ""),
+            json_data.get("difficulty", ""),
+            json_data.get("stars", ""),
+            json_data.get("song_path", ""),
+            json_data.get("info_file", "")
         )
     
+    def _process_info(self) -> SongInfo:
+
+        # load info data
+        json_info = None
+        with open(os.path.join(self.song_path, self.info_file), encoding='utf-8') as dd:
+            json_info = json.load(dd)
+
+        version = Version(json_info["_version"])
+        return SongInfo.from_json(version, json_info)
+    
+    def _process_beatmap(self, info : SongInfo):
+
+        # load beatmap file data
+        json_beatmap = None
+        with open(os.path.join(self.song_path, info.get_beatmap_name(self.diff)), encoding='utf-8') as dd:
+            json_beatmap = json.load(dd)
+
+        version = Version(json_beatmap["_version"])
+        return BeatMap.from_json()
+
     def process(self) -> dict:
 
-        # load difficulty data
-        data = None
-        with open(self.level_path) as dd:
-            data = json.load(dd)
+        info = self._process_info()
 
-        # get notes, arcs and chains
+        return self._process_beatmap(info)
         
