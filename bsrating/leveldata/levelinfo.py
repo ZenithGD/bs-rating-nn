@@ -94,21 +94,22 @@ class LocalLevelInfo:
             json_info = json.load(dd)
 
         version = Version(json_info["_version"])
-        return SongInfo.from_json(version, json_info)
+        return SongInfo.from_json(version, json_info, diff=capitalize_diff(self.diff))
     
     def _process_beatmap(self, info : SongInfo):
 
         # load beatmap file data
         json_beatmap = None
-        with open(os.path.join(self.song_path, info.get_beatmap_name(self.diff)), encoding='utf-8') as dd:
+        with open(os.path.join(self.song_path, info.diff_fname), encoding='utf-8') as dd:
             json_beatmap = json.load(dd)
 
-        version = Version(json_beatmap["_version"])
-        return BeatMap.from_json()
+        jv = json_beatmap["_version"] if "_version" in json_beatmap else json_beatmap.get("version", "2.0.0")
+        version = Version(jv)
+        return BeatMap.from_json(version, json_beatmap, info=info)
 
     def process(self) -> dict:
 
         info = self._process_info()
 
-        return self._process_beatmap(info)
+        return self._process_beatmap(info).to_dict()
         

@@ -34,7 +34,7 @@ class Element:
     def from_json(cls, version : Version, json: dict, **kwargs):
 
         table = cls.get_parsing_table()
-        versions = table.keys()
+        versions = list(table.keys())
         target = versions[0]
         for vl in versions:
             
@@ -45,4 +45,6 @@ class Element:
 
         return table[target](json, **kwargs)
             
-            
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass

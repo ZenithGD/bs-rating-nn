@@ -89,7 +89,7 @@ def read_maps_info(
                 map_list.append(combine_map_info(map_info, folder_association, use_bl))
             else:
                 # update hash to be consistent just in case
-                map_info = map_list[existing_maps[(hash_key.lower(), diff_name)]]
+                map_info = map_list[existing_maps[(hash_key.lower(), capitalize_diff(diff_name))]]
                 updated_info = update_map_info(LocalLevelInfo.from_json(map_info), folder_association, use_bl)
                 map_list[existing_maps[(hash_key.lower(), diff_name)]] = updated_info
         except Exception as e:
@@ -131,6 +131,7 @@ def process_diff_files(song_data : list, folder : str):
             except Exception as e:
                 print("Error dumping diff:", e)
                 traceback.print_exc()
+
 def main(args):
 
     # create folder 
@@ -140,6 +141,7 @@ def main(args):
     except:
         print(f"Folder already {path_to_dataset} exists.")
 
+    print("1. Reading playlists...")
     ranked_playlist = read_playlists(args.ss_playlist, args.bl_playlist, args.use_bl)
 
     # check if the output file exists and has some maps already
@@ -153,15 +155,20 @@ def main(args):
     # associate the id with the local folder of the song
     folder_association = preprocess_folders(os.getenv("SONG_FOLDER"))
 
+    print("2. Fetching map info...")
     # read song folder and fetch information from scoresaber
-    song_data = read_maps_info(
-        os.getenv("SONG_FOLDER"), 
-        ranked_playlist, 
-        folder_association, 
-        use_bl=args.use_bl,
-        map_list=map_list,
-        verbose=args.verbose, 
-        limit=args.limit)
+    if args.skip_fetch:
+        with open(os.path.join(args.folder, args.output)) as song_file:
+            song_data = json.load(song_file)
+    else:
+        song_data = read_maps_info(
+            os.getenv("SONG_FOLDER"), 
+            ranked_playlist, 
+            folder_association, 
+            use_bl=args.use_bl,
+            map_list=map_list,
+            verbose=args.verbose, 
+            limit=args.limit)
     
     with open(os.path.join(args.folder, args.output), 'w') as song_list:
         json.dump(song_data, song_list, indent=2)
@@ -170,6 +177,7 @@ def main(args):
     # only the note information will be kept along with the real timestamp (not in beats but in seconds)
     # this can potentially be used for the positional encodings to introduce information about the 
     # speed of the swings.
+    print("3. Processing difficulty files...")
     process_diff_files(song_data, path_to_dataset)
 
 if __name__ == '__main__':
@@ -184,5 +192,5 @@ if __name__ == '__main__':
     parser.add_argument("--limit", type=int, default=-1, help="Limit of ranked maps")
     parser.add_argument("--verbose", action="store_true", help="Whether to print additional info")
     parser.add_argument("--output", help="The name of the output .json file referencing all the songs.", default="song_data.json")
-
+    parser.add_argument("--skip_fetch", action="store_true", help="Skip fetch and use local data only. Will look for a file matching the output name")
     main(parser.parse_args())

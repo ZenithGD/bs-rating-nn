@@ -36,10 +36,21 @@ class ColorNote(Element):
         )
 
     @classmethod
-    def get_parsing_table():
+    def get_parsing_table(cls):
         return {
             Version("2.0.0"): ColorNote.from_json_2_0_0,
             Version("3.0.0"): ColorNote.from_json_3_0_0
+        }
+    
+    def to_dict(self):
+        return {
+            "type": "color_note",
+            "time": self.time,
+            "x": self.x,
+            "y": self.y,
+            "color": self.color,
+            "cut_dir": self.cut_dir,
+            "angle_offset": self.angle_offset,
         }
 
 class BombNote(Element):
@@ -67,10 +78,18 @@ class BombNote(Element):
         )
 
     @classmethod
-    def get_parsing_table():
+    def get_parsing_table(cls):
         return {
             Version("2.0.0"): BombNote.from_json_2_0_0,
             Version("3.0.0"): BombNote.from_json_3_0_0,
+        }
+    
+    def to_dict(self):
+        return {
+            "type": "bomb_note",
+            "time": self.time,
+            "x": self.x,
+            "y": self.y
         }
 
 class Obstacle(Element):
@@ -85,7 +104,7 @@ class Obstacle(Element):
         self.height = height
 
     @classmethod
-    def get_parsing_table():
+    def get_parsing_table(cls):
         return {
             Version("2.0.0"): Obstacle.from_json_2_0_0,
             Version("2.6.0"): Obstacle.from_json_2_0_0,
@@ -142,3 +161,14 @@ class Obstacle(Element):
             json["w"],
             json["h"]
         )
+    
+    def to_dict(self):
+        return {
+            "type": "obstacle",
+            "time": self.time,
+            "x": self.x,
+            "y": self.y,
+            "duration": self.duration,
+            "width": self.width,
+            "height": self.height,
+        }
