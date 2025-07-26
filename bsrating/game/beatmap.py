@@ -125,15 +125,38 @@ class BeatMap(Element):
         raise NotImplementedError("Not planned (4.0.0)")
     
     def to_dict(self):
-        
-        serialized_elms = []
 
         # TODO: for every element, change the beat ("time" field) to real time in seconds.
         # This will potentially improve gauging difficulty based on swing speed/eBPMs
 
-        bpms = sorted(self.bpm_events, key = lambda ev : ev.beat)
+        bpm_evs = sorted(self.bpm_events, key = lambda ev : ev.beat)
 
-        elements = list(sorted(self.notes + self.obstacles + self.bombs, key = lambda n : n.time))
+        elements = list(sorted(self.notes + self.obstacles + self.bombs, key = lambda n : n.beat))
         elements = list(map(lambda e : e.to_dict(), elements))
+        
+        # marks current beat, timestamp and index of the latest BPM event
+        element_idx = 0
+        bpm_ev_ts = 0
+        prev_ev_beat = 0
+        prev_ev_ts = 0
+        prev_ev_bpm = self.info.initial_bpm
+        
+        for i, bpm_ev in enumerate(bpm_evs):
+            bpm_section_beats = bpm_ev.beat - prev_ev_beat
+            prev_ev_ts = bpm_ev_ts
+            bpm_ev_ts += 60.0 * bpm_section_beats / prev_ev_bpm
+ 
+            while element_idx < len(elements) and elements[element_idx]["beat"] < bpm_ev.beat:
+                section_diff_beats = elements[element_idx]["beat"] - prev_ev_beat
+                elements[element_idx]["time"] = prev_ev_ts + 60.0 * section_diff_beats / prev_ev_bpm
+                element_idx += 1
+
+            prev_ev_beat = bpm_ev.beat
+            prev_ev_bpm = bpm_ev.bpm
+
+        while element_idx < len(elements):
+            section_diff_beats = elements[element_idx]["beat"] - prev_ev_beat
+            elements[element_idx]["time"] = prev_ev_ts + 60.0 * section_diff_beats / prev_ev_bpm
+            element_idx += 1
         
         return elements

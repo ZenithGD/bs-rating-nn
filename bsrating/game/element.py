@@ -1,10 +1,20 @@
 from packaging.version import Version
 
 from abc import ABC, abstractmethod
+from enum import IntEnum
+
+class ElementType(IntEnum):
+    ColorNoteRed = 0,
+    ColorNoteBlue = 1,
+    BombNote = 2,
+    Obstacle = 3,
+    BPMEvent = 100,
+    Other = -1,
 
 class Element:
     
-   
+    elm_type = ElementType.Other
+
     """A generic element that can be parsed. The parsing table associates a version
     with the function that generates the object from its JSON representation. For example:
     
@@ -29,6 +39,9 @@ class Element:
     @abstractmethod
     def get_parsing_table(cls) -> dict:
         pass
+
+    def get_enum_type(cls) -> ElementType:
+        return cls.type
 
     @classmethod
     def from_json(cls, version : Version, json: dict, **kwargs):

@@ -123,14 +123,19 @@ def read_playlists(ss_path : str, bl_path : str, use_bl) -> list:
 
 def process_diff_files(song_data : list, folder : str):
     
+    err_parse_count = 0
+    
     for i, diff_data in enumerate(tqdm(song_data)):
         local_data = LocalLevelInfo.from_json(diff_data)
         with open(os.path.join(folder, local_data.unique_id()), 'w', encoding='utf-8') as f:
             try:
                 json.dump(local_data.process(), f)
             except Exception as e:
-                print("Error dumping diff:", e)
+                print(f"({local_data.id}, {local_data.diff}) Error dumping diff:", e)
                 traceback.print_exc()
+                err_parse_count += 1
+
+    print(f"{err_parse_count} maps failed to load!")
 
 def main(args):
 

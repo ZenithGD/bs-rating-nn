@@ -1,8 +1,10 @@
 from packaging.version import Version
 
-from bsrating.game.element import Element
+from bsrating.game.element import Element, ElementType
 
 class BPMEvent(Element):
+
+    elm_type = ElementType.BPMEvent
 
     def __init__(self, beat, bpm):
         self.beat = beat
@@ -32,7 +34,11 @@ class BPMEvent(Element):
     
     def to_dict(self):
         return {
-            "type": "bpm_event",
+            "type": self.elm_type,
             "beat": self.beat,
             "bpm": self.bpm
         }
+    
+    @classmethod
+    def get_enum_type(cls) -> ElementType:
+        pass

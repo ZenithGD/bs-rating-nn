@@ -1,12 +1,12 @@
 from packaging.version import Version
 
-from bsrating.game.element import Element
+from bsrating.game.element import Element, ElementType
 
-class ColorNote(Element):
+class ColorNote(Element): 
 
-    def __init__(self, time : float, x: float, y: float, color: int, cut_dir: float, angle_offset: float):
+    def __init__(self, beat : float, x: float, y: float, color: int, cut_dir: float, angle_offset: float):
 
-        self.time = time
+        self.beat = beat
         self.x = x
         self.y = y
         self.color = color
@@ -44,20 +44,20 @@ class ColorNote(Element):
     
     def to_dict(self):
         return {
-            "type": "color_note",
-            "time": self.time,
+            "type": ElementType.ColorNoteRed if self.color == 0 else ElementType.ColorNoteBlue,
+            "beat": self.beat,
             "x": self.x,
             "y": self.y,
-            "color": self.color,
             "cut_dir": self.cut_dir,
             "angle_offset": self.angle_offset,
         }
 
 class BombNote(Element):
+    elm_type = ElementType.BombNote
 
-    def __init__(self, time : float, x, y):
+    def __init__(self, beat : float, x, y):
 
-        self.time = time
+        self.beat = beat
         self.x = x
         self.y = y
 
@@ -86,17 +86,19 @@ class BombNote(Element):
     
     def to_dict(self):
         return {
-            "type": "bomb_note",
-            "time": self.time,
+            "type": self.elm_type,
+            "beat": self.beat,
             "x": self.x,
             "y": self.y
         }
 
 class Obstacle(Element):
 
-    def __init__(self, time : float, x, y, duration, width, height):
+    elm_type = ElementType.Obstacle
 
-        self.time = time
+    def __init__(self, beat : float, x, y, duration, width, height):
+
+        self.beat = beat
         self.x = x
         self.y = y
         self.duration = duration
@@ -164,8 +166,8 @@ class Obstacle(Element):
     
     def to_dict(self):
         return {
-            "type": "obstacle",
-            "time": self.time,
+            "type": self.elm_type,
+            "beat": self.beat,
             "x": self.x,
             "y": self.y,
             "duration": self.duration,
