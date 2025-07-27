@@ -96,7 +96,7 @@ def main(args):
     # 2. eval beatmaps
     # TODO load just the model, don't load a checkpoint
     model = RatingPredictorNN(
-        token_dim=9,
+        token_dim=10,
         model_dim=512,
         heads=4,
         attn_layers=2)
