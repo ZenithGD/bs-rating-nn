@@ -21,15 +21,15 @@ class BPMEvent(Element):
     def from_json_2_5_0(json: dict, **kwargs):
 
         return BPMEvent(
-            json["_time"],
-            json["_floatValue"]
+            json.get("_time", 0),
+            json.get("_floatValue", 0)
         )
     
     @staticmethod
     def from_json_3_0_0(json: dict, **kwargs):
         return BPMEvent(
-            json["b"],
-            json["m"]
+            json.get("b", 0),
+            json.get("m", 0)
         )
     
     def to_dict(self):

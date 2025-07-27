@@ -127,9 +127,13 @@ def process_diff_files(song_data : list, folder : str):
     
     for i, diff_data in enumerate(tqdm(song_data)):
         local_data = LocalLevelInfo.from_json(diff_data)
-        with open(os.path.join(folder, local_data.unique_id()), 'w', encoding='utf-8') as f:
+        with open(os.path.join(folder, f"{local_data.id}_{local_data.unique_id()}.json"), 'w', encoding='utf-8') as f:
             try:
-                json.dump(local_data.process(), f)
+                beatmap_data = {
+                    "data" : local_data.process(),  # X
+                    "rating" : local_data.stars     # y
+                }
+                json.dump(beatmap_data, f)
             except Exception as e:
                 print(f"({local_data.id}, {local_data.diff}) Error dumping diff:", e)
                 traceback.print_exc()

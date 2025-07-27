@@ -1,3 +1,4 @@
+import numpy as np
 from packaging.version import Version
 
 from bsrating.game.element import Element, ElementType
@@ -16,23 +17,23 @@ class ColorNote(Element):
     @staticmethod
     def from_json_2_0_0(json: dict, **kwargs):
         return ColorNote(
-            json["_time"],
-            json["_lineIndex"],
-            json["_lineLayer"],
-            json["_type"],
-            json["_cutDirection"],
+            json.get("_time", 0),
+            json.get("_lineIndex", 0),
+            json.get("_lineLayer", 0),
+            json.get("_type", 0),
+            json.get("_cutDirection", 0),
             0
         )
 
     @staticmethod
     def from_json_3_0_0(json: dict, **kwargs):
         return ColorNote(
-            json["b"],
-            json["x"],
-            json["y"],
-            json["c"],
-            json["d"],
-            json["a"]
+            json.get("b", 0),
+            json.get("x", 0),
+            json.get("y", 0),
+            json.get("c", 0),
+            json.get("d", 0),
+            json.get("a", 0)
         )
 
     @classmethod
@@ -42,14 +43,36 @@ class ColorNote(Element):
             Version("3.0.0"): ColorNote.from_json_3_0_0
         }
     
+    def note_angle(self) -> float:
+        # get angle of the cut direction and add offset
+        dirs = [
+            0,                      # 0: up
+            np.pi,                  # 1: down
+            -np.pi / 2.0,           # 2: left
+            np.pi / 2.0,            # 3: right
+            -np.pi / 4.0,           # 4: up left
+            np.pi / 4.0,            # 5: up right
+            -3.0 * np.pi / 4.0,     # 6: down left
+            3.0 * np.pi / 4.0,      # 7: down right
+            0                       # 8: any
+        ]
+
+        a = dirs[self.cut_dir] - np.deg2rad(self.angle_offset)
+        any_dir = self.cut_dir == 8
+
+        # clamp to [-pi, pi] range
+        return ((a + 180.0) % 360.0) - 180.0, any_dir
+    
     def to_dict(self):
+        a, any_dir = self.note_angle()
+    
         return {
             "type": ElementType.ColorNoteRed if self.color == 0 else ElementType.ColorNoteBlue,
             "beat": self.beat,
             "x": self.x,
             "y": self.y,
-            "cut_dir": self.cut_dir,
-            "angle_offset": self.angle_offset,
+            "angle": a,
+            "any_dir": any_dir
         }
 
 class BombNote(Element):
@@ -64,17 +87,17 @@ class BombNote(Element):
     @staticmethod
     def from_json_2_0_0(json: dict, **kwargs):
         return BombNote(
-            json["_time"],
-            json["_lineIndex"],
-            json["_lineLayer"]
+            json.get("_time", 0),
+            json.get("_lineIndex", 0),
+            json.get("_lineLayer", 0)
         )
 
     @staticmethod
     def from_json_3_0_0(json: dict, **kwargs):
         return BombNote(
-            json["b"],
-            json["x"],
-            json["y"]
+            json.get("b", 0),
+            json.get("x", 0),
+            json.get("y", 0)
         )
 
     @classmethod
@@ -119,20 +142,20 @@ class Obstacle(Element):
         match json["_type"]:
             case 0:
                 return Obstacle(
-                    json["_time"],
-                    json["_lineIndex"],
+                    json.get("_time", 0),
+                    json.get("_lineIndex", 0),
                     0,
-                    json["_duration"],
-                    json["_width"],
+                    json.get("_duration", 0),
+                    json.get("_width", 0),
                     5
                 )
             case 1:
                 return Obstacle(
-                    json["_time"],
-                    json["_lineIndex"],
+                    json.get("_time", 0),
+                    json.get("_lineIndex", 0),
                     2,
-                    json["_duration"],
-                    json["_width"],
+                    json.get("_duration", 0),
+                    json.get("_width", 0),
                     3
                 )
 
@@ -145,23 +168,23 @@ class Obstacle(Element):
             
             case 2:
                 return Obstacle(
-                    json["_time"],
-                    json["_lineIndex"],
-                    json["_lineLayer"],
-                    json["_duration"],
-                    json["_width"],
-                    json["_height"]
+                    json.get("_time", 0),
+                    json.get("_lineIndex", 0),
+                    json.get("_lineLayer", 0),
+                    json.get("_duration", 0),
+                    json.get("_width", 0),
+                    json.get("_height", 0)
                 )
     
     @staticmethod
     def from_json_3_0_0(json: dict, **kwargs):
         return Obstacle(
-            json["b"],
-            json["d"],
-            json["x"],
-            json["y"],
-            json["w"],
-            json["h"]
+            json.get("b", 0),
+            json.get("d", 0),
+            json.get("x", 0),
+            json.get("y", 0),
+            json.get("w", 0),
+            json.get("h", 0)
         )
     
     def to_dict(self):

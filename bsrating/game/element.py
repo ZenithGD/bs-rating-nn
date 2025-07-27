@@ -8,8 +8,8 @@ class ElementType(IntEnum):
     ColorNoteBlue = 1,
     BombNote = 2,
     Obstacle = 3,
+    Other = 4,
     BPMEvent = 100,
-    Other = -1,
 
 class Element:
     

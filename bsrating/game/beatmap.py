@@ -149,6 +149,9 @@ class BeatMap(Element):
             while element_idx < len(elements) and elements[element_idx]["beat"] < bpm_ev.beat:
                 section_diff_beats = elements[element_idx]["beat"] - prev_ev_beat
                 elements[element_idx]["time"] = prev_ev_ts + 60.0 * section_diff_beats / prev_ev_bpm
+
+                # Future work: include VNJS events
+                elements[element_idx]["njs"] = self.info.njs
                 element_idx += 1
 
             prev_ev_beat = bpm_ev.beat
@@ -157,6 +160,9 @@ class BeatMap(Element):
         while element_idx < len(elements):
             section_diff_beats = elements[element_idx]["beat"] - prev_ev_beat
             elements[element_idx]["time"] = prev_ev_ts + 60.0 * section_diff_beats / prev_ev_bpm
+
+            # Future work: include VNJS events
+            elements[element_idx]["njs"] = self.info.njs
             element_idx += 1
         
         return elements
