@@ -31,17 +31,17 @@ def main(args):
 
     # 2. train network
     model = RatingPredictorNN(
-        token_dim=9,
-        model_dim=128,
+        token_dim=10,
+        model_dim=512,
         heads=4,
-        attn_layers=3)
+        attn_layers=2)
     
     model.to(device)
-    criterion = nn.GaussianNLLLoss()  # Or GaussianNLLLoss if predicting variance too
-    optimizer = optim.Adam(model.parameters(), lr=2e-4)
+    criterion = nn.MSELoss()  # Or GaussianNLLLoss if predicting variance too
+    optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
     losses = []
-    epochs = 20
+    epochs = 50
     for epoch in (pbar := tqdm(range(epochs), position=0, desc="Epochs")):
         
         epoch_loss = 0.0
@@ -57,30 +57,27 @@ def main(args):
             padding_mask = padding_mask.to(device)
             
             optimizer.zero_grad()
-            mu, var = model(tokens, type_id, padding_mask)
-            var = var.clamp(min=1e-6)
+            mu = model(tokens, type_id, padding_mask)
 
-            loss = criterion(mu.squeeze(), rating, var.squeeze())
+            loss = criterion(mu, rating)
 
             loss.backward()
             optimizer.step()
 
             epoch_loss += loss.item()
 
-        losses.append(epoch_loss)
-        pbar.set_postfix({"loss", epoch_loss})
+        losses.append(epoch_loss / len(dataloader))
+        pbar.set_postfix({"loss": epoch_loss / len(dataloader)})
 
     # 3. save model
-    torch.save({
-        'epoch': epoch,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'loss': loss
-    }, args.model_path)
+    torch.save(model.state_dict(), args.model_path)
 
     # 3. show results
     fig, ax = plt.subplots(1, 1)
     ax.plot(np.arange(len(losses)), losses)
+    ax.set_title("Loss vs. epoch")
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("MSE Loss")
 
     plt.show()
 

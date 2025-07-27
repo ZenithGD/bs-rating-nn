@@ -97,24 +97,15 @@ def main(args):
     # TODO load just the model, don't load a checkpoint
     model = RatingPredictorNN(
         token_dim=9,
-        model_dim=128,
+        model_dim=512,
         heads=4,
-        attn_layers=3)
-    criterion = nn.GaussianNLLLoss()
-    optimizer = optim.Adam(model.parameters(), lr=2e-4)
-    model.to(device)
-    checkpoint = torch.load(args.model, map_location=device)
-
-    model.load_state_dict(checkpoint['model_state_dict'])
-    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-    epoch = checkpoint['epoch']
-    train_loss = checkpoint['loss']
+        attn_layers=2)
+    model = model.load_state_dict(torch.load(args.model, weights_only=True))
 
     dataset = MapDataset(paths)
     dataloader = DataLoader(dataset, batch_size=1, collate_fn=collate_fn)
 
-    predicted_means = []
-    predicted_stds = []
+    predicted_ratings = []
     map_names = []
 
     with torch.no_grad():
@@ -124,23 +115,19 @@ def main(args):
             type_ids = type_ids.to(device)
             padding_mask = padding_mask.to(device)
 
-            mu, var = model(tokens, type_ids, padding_mask)
-            std = torch.sqrt(var)
-            print(mu, var)
-
-            predicted_means.append(mu.item())
-            predicted_stds.append(std.item())
+            rating = model(tokens, type_ids, padding_mask)
+            
+            predicted_ratings.append(rating.item())
             map_names.append(os.path.basename(path))
 
-    x = np.arange(len(predicted_means))
-    means = np.array(predicted_means)
-    stds = np.array(predicted_stds)
+    x = np.arange(len(predicted_ratings))
+    ratings = np.array(predicted_ratings)
 
     plt.figure(figsize=(10, 5))
-    plt.errorbar(x, means, yerr=stds, fmt='o', ecolor='gray', capsize=5, label="Prediction ± Uncertainty")
+    plt.plot(x, ratings, fmt='o', ecolor='gray', capsize=5, label="Prediction")
     plt.xticks(x, map_names, rotation=45, ha='right')
-    plt.ylabel("Predicted Star Rating")
-    plt.title("Predicted Difficulty Ratings with Uncertainty")
+    plt.ylabel("Stars")
+    plt.title("Predicted ratings")
     plt.grid(True)
     plt.tight_layout()
     plt.legend()

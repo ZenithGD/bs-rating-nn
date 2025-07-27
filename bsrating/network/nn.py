@@ -20,16 +20,7 @@ class RatingPredictorNN(nn.Module):
 
         self.pool = nn.Linear(model_dim, 1)
         
-        # uncertainty prediction layers
-        self.unc_mlp = nn.Sequential(
-            nn.Linear(model_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU()
-        )
-
-        self.out_mean = nn.Linear(64 + model_dim, 1)
-        self.out_logvar = nn.Linear(64 + model_dim, 1)
+        self.out = nn.Linear(model_dim, 1)
 
     def forward(self, feats, type_ids, pad_mask):
 
@@ -39,7 +30,7 @@ class RatingPredictorNN(nn.Module):
         # add positional encoding information
         x = self.pos_encoder(x)
 
-        # predict and pool
+        # predict scores and pool
         x = self.transformer(x)
         scores = self.pool(x).squeeze(-1)
 
@@ -50,11 +41,5 @@ class RatingPredictorNN(nn.Module):
         # aggregate values and attention
         pooled = torch.sum(weights.unsqueeze(-1) * x, dim=1)
 
-        # compute uncertainty
-        z = self.unc_mlp(pooled)
-        z_stacked = torch.cat([z, pooled], dim=-1)
-
-        mean = self.out_mean(z_stacked)
-        logvar = self.out_logvar(z_stacked)
-
-        return mean, torch.exp(logvar)
+        # predict rating
+        return self.out(pooled).squeeze(-1)

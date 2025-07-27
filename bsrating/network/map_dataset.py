@@ -29,8 +29,6 @@ class MapDataset(Dataset):
         with open(filepath) as fp:
             data = json.load(fp)
 
-        print(self.filepaths)
-
         def format_token(tok: dict):
             return [
                 tok.get("type", 0),
@@ -41,7 +39,8 @@ class MapDataset(Dataset):
                 1 if tok.get("any_dir", False) else 0,
                 tok.get("w", 0),
                 tok.get("h", 0),
-                tok.get("duration", 0)
+                tok.get("duration", 0),
+                tok.get("njs", 0)
             ], tok.get("type", 0)
 
         formatted_toks = list(zip(*[ format_token(tok) for tok in data["data"] ]))
