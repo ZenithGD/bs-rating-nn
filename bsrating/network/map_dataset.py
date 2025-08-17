@@ -8,7 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 
 class MapDataset(Dataset):
 
-    def __init__(self, filepaths):
+    def __init__(self, filepaths, notes_per_token=8):
         self.filepaths = filepaths
 
     def __len__(self):
@@ -44,7 +44,7 @@ class MapDataset(Dataset):
             ], tok.get("type", 0)
 
         formatted_toks = list(zip(*[ format_token(tok) for tok in data["data"] ]))
-        
+
         rating = torch.tensor(data["rating"], dtype=torch.float32)
         tokens = torch.tensor(formatted_toks[0], dtype=torch.float32)
         type_id = torch.tensor(formatted_toks[1], dtype=torch.long)
