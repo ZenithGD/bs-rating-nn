@@ -1,4 +1,4 @@
 from .ranking import *
 from .exceptions import *
-from .local import *
+from .localdata import *
 from .levelinfo import *

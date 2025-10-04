@@ -112,4 +112,18 @@ class LocalLevelInfo:
         info = self._process_info()
 
         return self._process_beatmap(info).to_dict()
-        
+
+def find_info_file(map_folder):
+    # find beatmap information in the info file.
+    print(map_folder)
+    path_options = [ "Info.dat", "info.dat" ]
+    try:
+        opt = next(
+            filter(
+                lambda op : os.path.isfile(os.path.join(map_folder, op)), path_options
+            )
+        )
+    except Exception as e:
+        raise Exception(f"Info file cannot be found!")
+    
+    return os.path.join(map_folder, opt)
